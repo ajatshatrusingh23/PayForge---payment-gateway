@@ -1,0 +1,60 @@
+{
+  "single": {
+    "duration_s": 30.2,
+    "concurrency": 30,
+    "payments": 5218,
+    "payments_per_sec": 172.9,
+    "api_requests_per_sec": 518.6,
+    "success_rate": 0.4435,
+    "statuses": {
+      "captured": 2314,
+      "failed": 2904
+    },
+    "errors": {},
+    "flow_latency_ms": {
+      "p50": 163,
+      "p90": 227,
+      "p95": 240,
+      "p99": 270,
+      "max": 536
+    },
+    "confirm_latency_ms": {
+      "p50": 124,
+      "p90": 189,
+      "p95": 203,
+      "p99": 226,
+      "max": 379
+    },
+    "outage_success_rate": 0.0085,
+    "outage_payments": 1994
+  },
+  "smart": {
+    "duration_s": 30.3,
+    "concurrency": 30,
+    "payments": 3483,
+    "payments_per_sec": 115,
+    "api_requests_per_sec": 345.1,
+    "success_rate": 0.9963,
+    "statuses": {
+      "captured": 3470,
+      "failed": 13
+    },
+    "errors": {},
+    "flow_latency_ms": {
+      "p50": 259,
+      "p90": 332,
+      "p95": 346,
+      "p99": 375,
+      "max": 515
+    },
+    "confirm_latency_ms": {
+      "p50": 245,
+      "p90": 318,
+      "p95": 329,
+      "p99": 352,
+      "max": 475
+    },
+    "outage_success_rate": 0.9955,
+    "outage_payments": 1103
+  }
+}

@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Services running on your machine via `npm run dev` (reached through the Docker host gateway).
+  - job_name: payforge-local
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - host.docker.internal:8080
+          - host.docker.internal:4001
+          - host.docker.internal:4002
+          - host.docker.internal:4003
+          - host.docker.internal:4004
+          - host.docker.internal:4005
+          - host.docker.internal:4006
+          - host.docker.internal:4007
+          - host.docker.internal:4009
+
+  # Services running as containers (`npm run docker:up`, profile "apps").
+  - job_name: payforge-docker
+    metrics_path: /metrics
+    static_configs:
+      - targets: [gateway:8080, merchant:4001, payment:4002, vault:4003, risk:4004, ledger:4005, webhook:4006, settlement:4007, bank-simulator:4009]

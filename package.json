@@ -1,0 +1,29 @@
+{
+  "name": "payforge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PayForge: a Stripe/Razorpay-style payment gateway built from scratch with NestJS microservices, Kafka, PostgreSQL and Redis.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "infra:up": "docker compose -f infra/docker-compose.yml up -d postgres redis redpanda",
+    "infra:up:all": "docker compose -f infra/docker-compose.yml --profile observability --profile tools up -d",
+    "infra:down": "docker compose -f infra/docker-compose.yml --profile observability --profile tools --profile apps down",
+    "infra:reset": "docker compose -f infra/docker-compose.yml --profile observability --profile tools --profile apps down -v",
+    "dev": "node scripts/dev.mjs",
+    "seed": "node scripts/seed.mjs",
+    "seed:data": "node scripts/seed.mjs --with-data",
+    "e2e": "node scripts/e2e.mjs",
+    "test": "npm --prefix backend test",
+    "typecheck": "npm --prefix backend run typecheck && npm --prefix web/dashboard run typecheck",
+    "build": "npm --prefix backend run build && npm --prefix sdk/payforge-js run build && npm --prefix web/checkout run build && npm --prefix web/dashboard run build",
+    "build:sdk": "npm --prefix sdk/payforge-js run build",
+    "load": "node scripts/loadtest.mjs",
+    "load:chaos": "node scripts/loadtest.mjs --chaos",
+    "docker:up": "docker compose -f infra/docker-compose.yml --profile apps up -d --build",
+    "docker:down": "docker compose -f infra/docker-compose.yml --profile apps down"
+  }
+}

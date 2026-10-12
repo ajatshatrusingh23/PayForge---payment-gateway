@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChaiCart · Orders</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E☕%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="logo" href="/"><span class="logo-mark">☕</span> ChaiCart</a>
+      <nav>
+        <a href="/">Shop</a>
+        <a href="/orders.html" class="active">Orders &amp; webhooks</a>
+      </nav>
+    </header>
+    <main class="page">
+      <section class="panel chaos">
+        <div>
+          <h2>Webhook chaos test</h2>
+          <p>Make this store's webhook endpoint return <code>503</code> for a while, place an order, then watch PayForge retry with exponential backoff in the dashboard (Webhooks page). Orders update once delivery succeeds.</p>
+          <p id="chaos-state" class="small"></p>
+        </div>
+        <div class="chaos-actions">
+          <button class="btn" data-chaos="60">Fail webhooks for 60s</button>
+          <button class="btn ghost" data-chaos="0">Stop</button>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Orders</h2>
+        <table>
+          <thead><tr><th>Order</th><th>Items</th><th>Amount</th><th>Status</th><th>PayForge payment</th><th>Webhooks received</th></tr></thead>
+          <tbody id="orders"><tr><td colspan="6" class="empty">No orders yet.</td></tr></tbody>
+        </table>
+      </section>
+    </main>
+    <script>
+      const inr = (p) => `₹${(p / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      async function refresh() {
+        const orders = await (await fetch('/api/orders')).json();
+        document.getElementById('orders').innerHTML = orders.length
+          ? orders
+              .map(
+                (o) => `<tr>
+                  <td><code>${o.id}</code></td>
+                  <td>${o.items.map((i) => `${i.name} × ${i.qty}`).join(', ')}</td>
+                  <td>${inr(o.amount)}</td>
+                  <td><span class="badge ${o.status}">${o.status.replace('_', ' ')}</span>${o.last_error ? `<div class="small error-text">${o.last_error}</div>` : ''}</td>
+                  <td><code>${o.payment_intent}</code></td>
+                  <td class="small">${o.events.map((e) => e.type).join('<br/>') || '—'}</td>
+                </tr>`,
+              )
+              .join('')
+          : '<tr><td colspan="6" class="empty">No orders yet.</td></tr>';
+        const chaos = await (await fetch('/api/chaos/webhooks')).json();
+        document.getElementById('chaos-state').textContent = chaos.failing_until
+          ? `Webhook endpoint is DOWN until ${new Date(chaos.failing_until).toLocaleTimeString()}`
+          : 'Webhook endpoint is healthy.';
+      }
+      document.querySelectorAll('[data-chaos]').forEach((b) =>
+        b.addEventListener('click', async () => {
+          await fetch('/api/chaos/webhooks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ seconds: Number(b.dataset.chaos) }) });
+          refresh();
+        }),
+      );
+      refresh();
+      setInterval(refresh, 2000);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,193 @@
+name: payforge
+
+# Profiles:
+#   (default)      postgres, redis, redpanda              -> `npm run infra:up`
+#   observability  prometheus, grafana, jaeger            -> `npm run infra:up:all`
+#   tools          redpanda console (Kafka UI)
+#   apps           every PayForge service + web apps      -> `npm run docker:up` (full stack in containers)
+
+x-backend: &backend
+  image: payforge/backend:local
+  build:
+    context: ../backend
+  profiles: [apps]
+  restart: unless-stopped
+  # Lets services reach processes on your machine (e.g. a webhook receiver on localhost).
+  extra_hosts: ["host.docker.internal:host-gateway"]
+  environment: &backend-env
+    NODE_ENV: development
+    LOG_JSON: "true"
+    DEMO_MODE: "true"
+    DATABASE_HOST: postgres
+    DATABASE_PORT: "5432"
+    REDIS_URL: redis://redis:6379
+    KAFKA_BROKERS: redpanda:9092
+    GATEWAY_URL: http://gateway:8080
+    MERCHANT_URL: http://merchant:4001
+    PAYMENT_URL: http://payment:4002
+    VAULT_URL: http://vault:4003
+    RISK_URL: http://risk:4004
+    LEDGER_URL: http://ledger:4005
+    WEBHOOK_URL: http://webhook:4006
+    SETTLEMENT_URL: http://settlement:4007
+    BANK_SIMULATOR_URL: http://bank-simulator:4009
+    OTEL_ENABLED: "${OTEL_ENABLED:-false}"
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+    redpanda: { condition: service_healthy }
+
+services:
+  # ------------------------------------------------------------------ data
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: payforge
+      POSTGRES_PASSWORD: payforge
+      POSTGRES_DB: payforge
+    command: ["postgres", "-c", "max_connections=300"]
+    ports: ["55432:5432"] # unusual host port so it never clashes with a locally installed Postgres
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payforge"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["6379:6379"]
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # Kafka-API compatible, single binary, much lighter than Kafka + ZooKeeper for local dev.
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.7
+    command:
+      - redpanda
+      - start
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+      - --smp=1
+      - --memory=512M
+      - --overprovisioned
+      - --mode=dev-container
+      - --default-log-level=warn
+    ports: ["19092:19092"]
+    volumes: [redpandadata:/var/lib/redpanda/data]
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # ------------------------------------------------------------------ tools / observability
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:v2.7.2
+    profiles: [tools]
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    ports: ["8081:8080"]
+    depends_on: [redpanda]
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    profiles: [observability]
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686" # UI
+      - "4318:4318"   # OTLP HTTP
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    profiles: [observability]
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=2d"]
+    volumes: [./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    ports: ["9090:9090"]
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    profiles: [observability]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["3002:3000"]
+    depends_on: [prometheus]
+
+  # ------------------------------------------------------------------ PayForge services (profile: apps)
+  # One backend image, nine containers: APP selects the service.
+  gateway:
+    <<: *backend
+    environment: { <<: *backend-env, APP: gateway, PORT: "8080", CORS_ORIGINS: "http://localhost:5174,http://localhost:3000,http://localhost:3001" }
+    ports: ["8080:8080"]
+  merchant:
+    <<: *backend
+    environment: { <<: *backend-env, APP: merchant, PORT: "4001" }
+  payment:
+    <<: *backend
+    environment: { <<: *backend-env, APP: payment, PORT: "4002" }
+  vault:
+    <<: *backend
+    environment: { <<: *backend-env, APP: vault, PORT: "4003" }
+  risk:
+    <<: *backend
+    environment: { <<: *backend-env, APP: risk, PORT: "4004" }
+  ledger:
+    <<: *backend
+    environment: { <<: *backend-env, APP: ledger, PORT: "4005" }
+  webhook:
+    <<: *backend
+    environment: { <<: *backend-env, APP: webhook, PORT: "4006", WEBHOOK_ALLOW_PRIVATE_URLS: "true" }
+  settlement:
+    <<: *backend
+    environment: { <<: *backend-env, APP: settlement, PORT: "4007" }
+  bank-simulator:
+    <<: *backend
+    environment: { <<: *backend-env, APP: bank-simulator, PORT: "4009" }
+
+  checkout:
+    build:
+      context: ../web/checkout
+      args: { VITE_API_URL: "http://localhost:8080" }
+    profiles: [apps]
+    ports: ["5174:80"]
+
+  dashboard:
+    build: { context: ../web/dashboard }
+    profiles: [apps]
+    environment:
+      PAYFORGE_API_URL: http://gateway:8080
+      INSECURE_COOKIES: "true" # plain http on localhost
+    ports: ["3001:3001"]
+    depends_on: [gateway]
+
+  # Seed first so web/demo-store/.env exists:
+  #   STORE_WEBHOOK_URL=http://demo-store:3000/webhooks/payforge npm run seed && docker compose -f infra/docker-compose.yml restart demo-store
+  demo-store:
+    build: { context: .., dockerfile: web/demo-store/Dockerfile }
+    profiles: [apps]
+    env_file:
+      - path: ../web/demo-store/.env
+        required: false
+    environment:
+      PAYFORGE_API_URL: http://gateway:8080
+      PAYFORGE_CHECKOUT_URL: http://localhost:5174
+    ports: ["3000:3000"]
+    depends_on: [gateway]
+
+volumes:
+  pgdata:
+  redisdata:
+  redpandadata:

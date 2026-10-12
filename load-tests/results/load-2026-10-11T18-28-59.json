@@ -1,0 +1,26 @@
+{
+  "duration_s": 30.3,
+  "concurrency": 40,
+  "payments": 4175,
+  "payments_per_sec": 137.7,
+  "api_requests_per_sec": 413.2,
+  "success_rate": 1,
+  "statuses": {
+    "captured": 4175
+  },
+  "errors": {},
+  "flow_latency_ms": {
+    "p50": 285,
+    "p90": 373,
+    "p95": 396,
+    "p99": 495,
+    "max": 684
+  },
+  "confirm_latency_ms": {
+    "p50": 259,
+    "p90": 347,
+    "p95": 363,
+    "p99": 418,
+    "max": 550
+  }
+}

@@ -1,0 +1,11 @@
+# Root build context (used by the demo-store image): keep it tiny.
+**/node_modules
+**/dist
+**/.next
+**/coverage
+**/*.log
+**/.env
+docs
+infra
+load-tests
+.git

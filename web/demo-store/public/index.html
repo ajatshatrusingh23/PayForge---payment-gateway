@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChaiCart · Fresh chai from Assam to your door</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E☕%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="logo" href="/"><span class="logo-mark">☕</span> ChaiCart</a>
+      <nav>
+        <a href="/" class="active">Shop</a>
+        <a href="/orders.html">Orders &amp; webhooks</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Demo merchant · payments by PayForge</p>
+        <h1>Small-batch chai, delivered.</h1>
+        <p class="sub">A sample store that integrates PayForge end to end: server-side PaymentIntents, the hosted checkout (card, OTP and UPI), and webhook-driven order fulfilment.</p>
+      </div>
+    </section>
+
+    <main class="layout">
+      <section>
+        <h2 class="section-title">Shop</h2>
+        <div id="products" class="grid"></div>
+      </section>
+
+      <aside class="cart" aria-label="Cart">
+        <h2 class="section-title">Your cart</h2>
+        <div id="cart-lines" class="cart-lines"><p class="empty">Your cart is empty.</p></div>
+        <div class="cart-total"><span>Total</span><strong id="cart-total">₹0.00</strong></div>
+        <label class="email">Email for receipt
+          <input id="email" type="email" placeholder="you@example.com" autocomplete="email" />
+        </label>
+        <button id="checkout" class="btn primary" disabled>Checkout</button>
+        <p class="note">You'll pay in PayForge's secure checkout. ChaiCart never sees your card details.</p>
+        <div id="status" class="status" hidden></div>
+      </aside>
+    </main>
+
+    <script src="/sdk/payforge.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

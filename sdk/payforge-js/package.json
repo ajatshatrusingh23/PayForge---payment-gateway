@@ -1,0 +1,27 @@
+{
+  "name": "@payforge/js",
+  "version": "1.0.0",
+  "description": "PayForge.js: embed PayForge's PCI-scoped hosted checkout in any website with a few lines of code.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/payforge.umd.cjs",
+  "module": "./dist/payforge.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/payforge.js",
+      "require": "./dist/payforge.umd.cjs"
+    }
+  },
+  "files": ["dist"],
+  "sideEffects": false,
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.json --emitDeclarationOnly",
+    "dev": "vite build --watch"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "7.3.7"
+  }
+}
